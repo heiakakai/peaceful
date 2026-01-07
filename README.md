@@ -35,3 +35,4 @@ streamlit run app.py
 ## 상단 메뉴 사용(사이드바 숨김)
 - 기본 사이드바 네비게이션은 `.streamlit/config.toml`의 `[client] showSidebarNavigation = false` 설정으로 숨겨져 있습니다.
 "# peaceful" 
+"# peaceful" 
