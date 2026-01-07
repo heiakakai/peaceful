@@ -10,7 +10,7 @@ class AdminCredential:
 # 허용 계정(요구사항)
 ALLOWED_ADMINS = [
     AdminCredential(username="heiakak", password="dl2tk4vkF*"),
-    AdminCredential(username="평안한", password="0560"),
+    AdminCredential(username="gana", password="0560"),
 ]
 
 def is_authenticated() -> bool:
