@@ -343,9 +343,6 @@ with st.expander("🖨️ 인쇄용 보기 (Ctrl+P / ⌘+P)"):
         <div class="titletext">{print_date_line}<br/>평안한교회 재정보고</div>
         {approval}
       </div>
-      <div class="period">기간: {start.isoformat()} ~ {end.isoformat()}</div></div>
-
-      </div>
 
       <div class='grid'>
         {df_to_html(income_sum, "수입", income_total)}
