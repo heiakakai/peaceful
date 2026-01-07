@@ -14,8 +14,14 @@ def apply_global_style() -> None:
         """
         <style>
         html, body, [class*="css"]  { font-size: 18px !important; }
-        .block-container { padding-top: 0.9rem; padding-bottom: 2.2rem; }
+        .block-container { padding-top: 1.4rem; padding-bottom: 2.2rem; }
         section[data-testid="stSidebar"] { display: none !important; }
+
+        /* Streamlit 상단 상태바/툴바가 상단 메뉴를 가리는 문제 방지 */
+        header[data-testid="stHeader"] { display: none !important; }
+        div[data-testid="stToolbar"] { display: none !important; }
+        div[data-testid="stDecoration"] { display: none !important; }
+
         button[kind="primary"], button[kind="secondary"] { min-height: 44px; font-size: 18px; }
         input, textarea, select { font-size: 18px !important; }
         div[data-testid="stDataFrame"] { font-size: 17px; }
@@ -36,6 +42,9 @@ def apply_global_style() -> None:
 
         /* 상단 네비게이션 간격 */
         .topnav { margin-bottom: 0.6rem; }
+        /* 상단 버튼이 상단에 붙어 깔리는 것 방지 */
+        div[data-testid="stHorizontalBlock"]:has(button[key^="nav_"]) { padding-top: 0.2rem; }
+
         </style>
         """,
         unsafe_allow_html=True,
@@ -78,11 +87,9 @@ def render_top_nav(active: str) -> None:
                 st.switch_page(path)
             except Exception:
                 st.info("페이지 이동 기능을 사용할 수 없습니다. Streamlit 버전을 확인해 주세요.")
-
     # 오른쪽: 로그인/로그아웃 + 엑셀 다운로드
     with cols[-1]:
         if is_authenticated():
-            st.caption("✅ 관리자 로그인")
             logout_button(key=f"logout_{active}")
             # 전체 엑셀 다운로드
             try:
@@ -98,15 +105,13 @@ def render_top_nav(active: str) -> None:
                 )
             except Exception as e:
                 st.caption("전체 엑셀 준비 실패")
-                st.caption(str(e))
         else:
-            st.caption("🔐 로그인 필요")
-            if st.button("로그인", type="primary", key=f"nav_login_btn_{active}", width="stretch"):
+            # 캡션을 빼고 버튼만 표시(두 줄로 보이는 문제 방지)
+            if st.button("🔐 로그인", type="primary", key=f"nav_login_btn_{active}", width="stretch"):
                 try:
                     st.switch_page("app.py")
                 except Exception:
                     pass
-
 def _sundays_of_month(year: int, month: int):
     cal = calendar.monthcalendar(year, month)
     sundays = []
@@ -229,4 +234,3 @@ def church_date_picker(prefix: str = "date") -> dt.date:
     )
 
     return dt.date(year, month, int(selected_day))
-

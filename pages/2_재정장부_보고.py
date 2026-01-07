@@ -191,7 +191,7 @@ expense_sum = with_totals(expense_sum, "지출항목", expense_total)
 sum_cols = st.columns(3, gap="small")
 sum_cols[0].metric("총수입", f"₩{income_total:,.0f}")
 sum_cols[1].metric("총지출", f"₩{expense_total:,.0f}")
-sum_cols[2].metric("순잔액(총수입-총지출)", f"₩{net_balance:,.0f}")
+sum_cols[2].metric("순잔액(총수입-총지출)", f"₩")
 
 st.divider()
 
@@ -263,6 +263,8 @@ except Exception as e:
 
 st.divider()
 
+print_date_line = f"{base_date.year}년 {base_date.month}월 {base_date.day}일"
+
 with st.expander("🖨️ 인쇄용 보기 (Ctrl+P / ⌘+P)"):
     def df_to_html(df: pd.DataFrame, kind: str, total: float) -> str:
         rows = []
@@ -316,14 +318,9 @@ with st.expander("🖨️ 인쇄용 보기 (Ctrl+P / ⌘+P)"):
         .titletext {{ font-size: 20px; font-weight: 800; line-height: 1.2; }}
         .period {{ margin: 6px 0 10px 0; font-size: 12px; color:#666; }}
 
-        .approval {{ border-collapse: collapse; font-size: 12px; min-width: 270px; }}
-        .approval th, .approval td {{ border: 1px solid #333; padding: 6px 8px; text-align:center; }}
-        .approval .sign {{ height: 34px; }}
-
-        .summary {{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 10px 0 12px 0; }}
-        .sumbox {{ border: 1px solid #ddd; border-radius: 10px; padding: 10px; }}
-        .sumbox h3 {{ margin: 0 0 6px 0; font-size: 14px; }}
-        .big {{ font-size: 16px; font-weight: 800; }}
+        .approval {{ border-collapse: collapse; font-size: 9px; width: 150px; margin-left:auto; }}
+        .approval th, .approval td {{ border: 1px solid #333; padding: 3px; text-align:center; width: 50px; }}
+        .approval .sign {{ height: 45px; }}
 
         .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }}
         .box {{ border: 1px solid #ddd; border-radius: 10px; padding: 12px; }}
@@ -343,20 +340,16 @@ with st.expander("🖨️ 인쇄용 보기 (Ctrl+P / ⌘+P)"):
     </head>
     <body>
       <div class="titlebar">
-        <div class="titletext">{title}</div>
+        <div class="titletext">{print_date_line}<br/>평안한교회 재정보고</div>
         {approval}
       </div>
-      <div class="period">기간: {start.isoformat()} ~ {end.isoformat()}</div>
-          {usage_to_html("수입", income_usage)}
-        </div>
+      <div class="period">기간: {start.isoformat()} ~ {end.isoformat()}</div></div>
         <div class="sumbox">
           <h3>총지출</h3>
-          <div class="big">₩{expense_total:,.0f}</div>
-          {usage_to_html("지출", expense_usage)}
-        </div>
+          <div class="big">₩{expense_total:,.0f}</div></div>
         <div class="sumbox">
-          <h3>순잔액(총수입-총지출)</h3>
-          <div class="big">₩{net_balance:,.0f}</div>
+          
+          <div class="big">₩</div>
         </div>
       </div>
 

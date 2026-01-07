@@ -5,7 +5,7 @@ from utils.ui import apply_global_style, render_header, render_top_nav
 from utils.auth import login_form, is_authenticated
 
 st.set_page_config(
-    page_title="교회 재정 프로그램",
+    page_title="평안한교회 재정장부",
     page_icon="💒",
     layout="wide",
     initial_sidebar_state="collapsed",

@@ -4,17 +4,23 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class AdminCredential:
-    username: str = "heiakak"
-    password: str = "dl2tk4vkF*"
+    username: str
+    password: str
 
-ADMIN = AdminCredential()
+# 허용 계정(요구사항)
+ALLOWED_ADMINS = [
+    AdminCredential(username="heiakak", password="dl2tk4vkF*"),
+    AdminCredential(username="평안한", password="0560"),
+]
 
 def is_authenticated() -> bool:
     return bool(st.session_state.get("authenticated", False))
 
 def authenticate(username: str, password: str) -> bool:
     # 간단 인증(요구사항). 실제 운영 시에는 환경변수/해시/SSO 등을 권장합니다.
-    return (username == ADMIN.username) and (password == ADMIN.password)
+    u = (username or "").strip()
+    p = password or ""
+    return any((u == adm.username and p == adm.password) for adm in ALLOWED_ADMINS)
 
 def login_form() -> None:
     st.subheader("로그인")
