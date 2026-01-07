@@ -300,7 +300,7 @@ with st.expander("🖨️ 인쇄용 보기 (Ctrl+P / ⌘+P)"):
     approval = """
     <table class='approval'>
       <tr>
-        <th>담당</th><th>부장</th><th>담임목사</th>
+        <th>담당</th><th>부장</th><th>목사</th>
       </tr>
       <tr>
         <td class='sign'>&nbsp;</td><td class='sign'>&nbsp;</td><td class='sign'>&nbsp;</td>
@@ -344,13 +344,7 @@ with st.expander("🖨️ 인쇄용 보기 (Ctrl+P / ⌘+P)"):
         {approval}
       </div>
       <div class="period">기간: {start.isoformat()} ~ {end.isoformat()}</div></div>
-        <div class="sumbox">
-          <h3>총지출</h3>
-          <div class="big">₩{expense_total:,.0f}</div></div>
-        <div class="sumbox">
-          
-          <div class="big">₩</div>
-        </div>
+
       </div>
 
       <div class='grid'>
