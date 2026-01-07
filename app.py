@@ -1,0 +1,24 @@
+# -*- coding: utf-8 -*-
+import streamlit as st
+
+from utils.ui import apply_global_style, render_header, render_top_nav
+from utils.auth import login_form, is_authenticated
+
+st.set_page_config(
+    page_title="교회 재정 프로그램",
+    page_icon="💒",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+apply_global_style()
+render_top_nav("기본정보")
+render_header("기본정보", "로그인 후 모든 메뉴를 확인하고 편집할 수 있습니다.")
+
+st.write("")
+
+if is_authenticated():
+    st.success("로그인 되어 있습니다.")
+    st.write("상단 메뉴에서 원하는 항목으로 이동하세요.")
+else:
+    login_form()
