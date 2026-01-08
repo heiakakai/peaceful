@@ -77,7 +77,7 @@ def closest_past_sunday(d: dt.date) -> dt.date:
 
 def date_range_for_mode(d: dt.date, mode: str):
     if mode == "일 보고":
-        return d, d, f"{d.year}년 {d.month}월 {d.day}일({'월화수목금토일'[d.weekday()]})"
+        return d, d, f"{d.year}년 {d.month}월 {d.day}일"
     if mode == "주 보고":
         sun = closest_past_sunday(d)
         start = sun
