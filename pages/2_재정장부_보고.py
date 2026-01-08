@@ -87,22 +87,22 @@ def date_range_for_mode(d: dt.date, mode: str):
         if end > month_end:
             end = month_end
         week_idx = sundays_of_month(d.year, d.month).index(sun) + 1
-        return start, end, f"{d.year}년 {d.month}월 {week_idx}주차(주)"
+        return start, end, f"{d.year}년 {d.month}월 {week_idx}주차"
     if mode == "월 보고":
         start = dt.date(d.year, d.month, 1)
         end = dt.date(d.year, d.month, calendar.monthrange(d.year, d.month)[1])
-        return start, end, f"{d.year}년 {d.month}월(월)"
+        return start, end, f"{d.year}년 {d.month}월"
     if mode == "분기 보고":
         q = (d.month - 1) // 3 + 1
         sm = (q - 1) * 3 + 1
         em = sm + 2
         start = dt.date(d.year, sm, 1)
         end = dt.date(d.year, em, calendar.monthrange(d.year, em)[1])
-        return start, end, f"{d.year}년 {q}/4분기(분기)"
+        return start, end, f"{d.year}년 {q}/4분기"
     if mode == "년 보고":
         start = dt.date(d.year, 1, 1)
         end = dt.date(d.year, 12, 31)
-        return start, end, f"{d.year}년(년)"
+        return start, end, f"{d.year}년"
     return d, d, f"{d.year}-{d.month}-{d.day}"
 
 start, end, title_suffix = date_range_for_mode(base_date, mode)
@@ -315,7 +315,7 @@ with st.expander("🖨️ 인쇄용 보기 (Ctrl+P / ⌘+P)"):
       <style>
         body {{ font-family: Arial, sans-serif; padding: 10px; }}
         .titlebar {{ display:flex; justify-content: space-between; align-items:flex-start; gap: 12px; }}
-        .titletext {{ font-size: 20px; font-weight: 800; line-height: 1.2; }}
+        .titletext {{ font-size: 32px; font-weight: 800; line-height: 1.2; }}
         .period {{ margin: 6px 0 10px 0; font-size: 12px; color:#666; }}
 
         .approval {{ border-collapse: collapse; font-size: 9px; width: 150px; margin-left:auto; }}
@@ -340,7 +340,7 @@ with st.expander("🖨️ 인쇄용 보기 (Ctrl+P / ⌘+P)"):
     </head>
     <body>
       <div class="titlebar">
-        <div class="titletext">{print_date_line}<br/>평안한교회 재정보고</div>
+        <div class="titletext">{title_suffix}<br/>평안한교회 재정보고</div>
         {approval}
       </div>
 
