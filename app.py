@@ -13,7 +13,7 @@ st.set_page_config(
 
 apply_global_style()
 render_top_nav("기본정보")
-render_header("기본정보", "로그인 후 모든 메뉴를 확인하고 편집할 수 있습니다.")
+render_header("로그인", "로그인 후 모든 메뉴를 확인하고 편집할 수 있습니다. 문의 이사야(010-6776-6789)")
 
 st.write("")
 
