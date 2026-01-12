@@ -66,20 +66,20 @@ def _coerce_text(value) -> str:
         return ""
     return str(value)
 
-def _coerce_amount(value) -> float:
+def _coerce_amount(value) -> int:
     if value is None or (isinstance(value, float) and pd.isna(value)):
-        return 0.0
+        return 0
     try:
-        return float(value)
+        return int(float(value))
     except Exception:
-        return 0.0
+        return 0
 
 def _reset_income_form() -> None:
     st.session_state["income_form_date"] = selected_date
     st.session_state["income_form_usage"] = USAGE_OPTIONS[0]
     st.session_state["income_form_item"] = INCOME_ITEMS[0]
     st.session_state["income_form_detail"] = ""
-    st.session_state["income_form_amount"] = 0.0
+    st.session_state["income_form_amount"] = 0
     st.session_state["income_form_note"] = ""
 
 def _reset_expense_form() -> None:
@@ -87,7 +87,7 @@ def _reset_expense_form() -> None:
     st.session_state["expense_form_usage"] = USAGE_OPTIONS[0]
     st.session_state["expense_form_item"] = EXPENSE_ITEMS[0]
     st.session_state["expense_form_detail"] = ""
-    st.session_state["expense_form_amount"] = 0.0
+    st.session_state["expense_form_amount"] = 0
     st.session_state["expense_form_note"] = ""
 
 # 날짜 변경 시 DB에서 로드
@@ -171,7 +171,7 @@ with left:
         in_usage = c2.selectbox("적요", USAGE_OPTIONS, key="income_form_usage")
         in_item = st.selectbox("수입항목", INCOME_ITEMS, key="income_form_item")
         in_detail = st.text_input("수입내역", key="income_form_detail")
-        in_amount = st.number_input("금액(원)", min_value=0.0, step=1.0, key="income_form_amount")
+        in_amount = st.number_input("금액(원)", min_value=0, step=1, key="income_form_amount")
         in_note = st.text_input("비고", key="income_form_note")
         income_submit = st.form_submit_button("수입 저장")
     if income_submit:
@@ -242,7 +242,7 @@ with right:
         ex_usage = c2.selectbox("적요", USAGE_OPTIONS, key="expense_form_usage")
         ex_item = st.selectbox("지출항목", EXPENSE_ITEMS, key="expense_form_item")
         ex_detail = st.text_input("지출내역", key="expense_form_detail")
-        ex_amount = st.number_input("금액(원)", min_value=0.0, step=1.0, key="expense_form_amount")
+        ex_amount = st.number_input("금액(원)", min_value=0, step=1, key="expense_form_amount")
         ex_note = st.text_input("비고", key="expense_form_note")
         expense_submit = st.form_submit_button("지출 저장")
     if expense_submit:
