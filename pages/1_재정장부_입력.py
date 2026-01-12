@@ -105,6 +105,24 @@ def _delete_row(which: str, idx: int) -> None:
     df = df.drop(index=idx).reset_index(drop=True)
     st.session_state[key] = _normalize_df(df, cols)
 
+def _income_row_key(row: dict) -> tuple:
+    return (
+        _coerce_date(row.get("날짜"), selected_date),
+        _coerce_text(row.get("적요")),
+        _coerce_text(row.get("수입항목")),
+        _coerce_text(row.get("수입내역")),
+        _coerce_amount(row.get("금액")),
+        _coerce_text(row.get("비고")),
+    )
+
+def _find_income_match_index(target_row: dict) -> int | None:
+    income_df_local = st.session_state.get(income_key, pd.DataFrame(columns=INCOME_COLS))
+    target_key = _income_row_key(target_row)
+    for idx, r in income_df_local.iterrows():
+        if _income_row_key(r) == target_key:
+            return idx
+    return None
+
 # 날짜 변경 시 DB에서 로드
 state_date_key = "in_selected_date"
 if st.session_state.get(state_date_key) != selected_date.isoformat():
@@ -295,6 +313,9 @@ with right:
         ex_note = st.text_input("비고", key="expense_form_note")
         expense_submit = st.form_submit_button("지출 저장")
     if expense_submit:
+        prev_expense_row = None
+        if expense_edit_idx in expense_df.index:
+            prev_expense_row = expense_df.loc[expense_edit_idx].to_dict()
         _upsert_row(
             "expense",
             None if expense_edit_idx == -1 else expense_edit_idx,
@@ -307,6 +328,30 @@ with right:
                 "비고": ex_note,
             },
         )
+        if prev_expense_row is not None:
+            prev_item = prev_expense_row.get("지출항목")
+            if prev_item in ("예치금", "이월금"):
+                prev_income = {
+                    "날짜": prev_expense_row.get("날짜"),
+                    "적요": prev_expense_row.get("적요"),
+                    "수입항목": prev_item,
+                    "수입내역": prev_expense_row.get("지출내역"),
+                    "금액": prev_expense_row.get("금액"),
+                    "비고": prev_expense_row.get("비고"),
+                }
+                match_idx = _find_income_match_index(prev_income)
+                if match_idx is not None:
+                    _delete_row("income", match_idx)
+        if ex_item in ("예치금", "이월금"):
+            linked_income = {
+                "날짜": ex_date,
+                "적요": ex_usage,
+                "수입항목": ex_item,
+                "수입내역": ex_detail,
+                "금액": ex_amount,
+                "비고": ex_note,
+            }
+            _upsert_row("income", None, linked_income)
         st.session_state["expense_edit_last"] = -1
         _request_expense_form_reset()
         try:
