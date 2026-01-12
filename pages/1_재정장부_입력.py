@@ -87,10 +87,23 @@ def _upsert_row(which: str, idx: int | None, row: dict) -> None:
 with left:
     st.markdown('<div class="section-title">일별 헌금 수입 명세서</div>', unsafe_allow_html=True)
     st.metric("합계 금액", f"₩{income_total:,.0f}")
+    def _income_label(i: int) -> str:
+        if i == -1:
+            return "신규 입력"
+        row = income_df.loc[i]
+        d = row.get("날짜")
+        date_txt = d.isoformat() if hasattr(d, "isoformat") else str(d)
+        usage = row.get("적요") or ""
+        item = row.get("수입항목") or ""
+        detail = row.get("수입내역") or ""
+        amount = row.get("금액")
+        amt_txt = f"{int(amount):,}" if pd.notna(amount) else ""
+        note = row.get("비고") or ""
+        return f"{date_txt} / {usage} / {item} / {detail} / {amt_txt} / {note}"
     income_edit_idx = st.selectbox(
         "수정할 수입 행",
         options=[-1] + list(income_df.index),
-        format_func=lambda i: "신규 입력" if i == -1 else f"{i + 1}행",
+        format_func=_income_label,
         key="income_edit_idx",
     )
     if income_edit_idx in income_df.index:
@@ -107,7 +120,9 @@ with left:
         in_detail_default = income_row.get("수입내역") or ""
         in_amount_default = income_row.get("금액")
         if pd.isna(in_amount_default):
-            in_amount_default = 0
+            in_amount_default = 0.0
+        else:
+            in_amount_default = float(in_amount_default)
         in_note_default = income_row.get("비고") or ""
     else:
         in_date_default = selected_date
@@ -122,7 +137,7 @@ with left:
         in_usage = c2.selectbox("적요", USAGE_OPTIONS, index=USAGE_OPTIONS.index(in_usage_default), key=f"in_usage_{income_edit_idx}")
         in_item = st.selectbox("수입항목", INCOME_ITEMS, index=INCOME_ITEMS.index(in_item_default), key=f"in_item_{income_edit_idx}")
         in_detail = st.text_input("수입내역", value=in_detail_default, key=f"in_detail_{income_edit_idx}")
-        in_amount = st.number_input("금액(원)", min_value=0, step=1, value=in_amount_default, key=f"in_amount_{income_edit_idx}")
+        in_amount = st.number_input("금액(원)", min_value=0.0, step=1.0, value=float(in_amount_default), key=f"in_amount_{income_edit_idx}")
         in_note = st.text_input("비고", value=in_note_default, key=f"in_note_{income_edit_idx}")
         income_submit = st.form_submit_button("수입 저장")
     if income_submit:
@@ -146,10 +161,23 @@ with left:
 with right:
     st.markdown('<div class="section-title">일별 헌금 지출 명세서</div>', unsafe_allow_html=True)
     st.metric("합계 금액", f"₩{expense_total:,.0f}")
+    def _expense_label(i: int) -> str:
+        if i == -1:
+            return "신규 입력"
+        row = expense_df.loc[i]
+        d = row.get("날짜")
+        date_txt = d.isoformat() if hasattr(d, "isoformat") else str(d)
+        usage = row.get("적요") or ""
+        item = row.get("지출항목") or ""
+        detail = row.get("지출내역") or ""
+        amount = row.get("금액")
+        amt_txt = f"{int(amount):,}" if pd.notna(amount) else ""
+        note = row.get("비고") or ""
+        return f"{date_txt} / {usage} / {item} / {detail} / {amt_txt} / {note}"
     expense_edit_idx = st.selectbox(
         "수정할 지출 행",
         options=[-1] + list(expense_df.index),
-        format_func=lambda i: "신규 입력" if i == -1 else f"{i + 1}행",
+        format_func=_expense_label,
         key="expense_edit_idx",
     )
     if expense_edit_idx in expense_df.index:
@@ -166,7 +194,9 @@ with right:
         ex_detail_default = expense_row.get("지출내역") or ""
         ex_amount_default = expense_row.get("금액")
         if pd.isna(ex_amount_default):
-            ex_amount_default = 0
+            ex_amount_default = 0.0
+        else:
+            ex_amount_default = float(ex_amount_default)
         ex_note_default = expense_row.get("비고") or ""
     else:
         ex_date_default = selected_date
@@ -181,7 +211,7 @@ with right:
         ex_usage = c2.selectbox("적요", USAGE_OPTIONS, index=USAGE_OPTIONS.index(ex_usage_default), key=f"ex_usage_{expense_edit_idx}")
         ex_item = st.selectbox("지출항목", EXPENSE_ITEMS, index=EXPENSE_ITEMS.index(ex_item_default), key=f"ex_item_{expense_edit_idx}")
         ex_detail = st.text_input("지출내역", value=ex_detail_default, key=f"ex_detail_{expense_edit_idx}")
-        ex_amount = st.number_input("금액(원)", min_value=0, step=1, value=ex_amount_default, key=f"ex_amount_{expense_edit_idx}")
+        ex_amount = st.number_input("금액(원)", min_value=0.0, step=1.0, value=float(ex_amount_default), key=f"ex_amount_{expense_edit_idx}")
         ex_note = st.text_input("비고", value=ex_note_default, key=f"ex_note_{expense_edit_idx}")
         expense_submit = st.form_submit_button("지출 저장")
     if expense_submit:
