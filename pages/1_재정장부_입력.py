@@ -74,7 +74,7 @@ def _coerce_amount(value) -> int:
     except Exception:
         return 0
 
-def _reset_income_form() -> None:
+def _apply_income_form_defaults() -> None:
     st.session_state["income_form_date"] = selected_date
     st.session_state["income_form_usage"] = USAGE_OPTIONS[0]
     st.session_state["income_form_item"] = INCOME_ITEMS[0]
@@ -82,13 +82,19 @@ def _reset_income_form() -> None:
     st.session_state["income_form_amount"] = 0
     st.session_state["income_form_note"] = ""
 
-def _reset_expense_form() -> None:
+def _request_income_form_reset() -> None:
+    st.session_state["income_form_reset_pending"] = True
+
+def _apply_expense_form_defaults() -> None:
     st.session_state["expense_form_date"] = selected_date
     st.session_state["expense_form_usage"] = USAGE_OPTIONS[0]
     st.session_state["expense_form_item"] = EXPENSE_ITEMS[0]
     st.session_state["expense_form_detail"] = ""
     st.session_state["expense_form_amount"] = 0
     st.session_state["expense_form_note"] = ""
+
+def _request_expense_form_reset() -> None:
+    st.session_state["expense_form_reset_pending"] = True
 
 def _delete_row(which: str, idx: int) -> None:
     key = income_key if which == "income" else expense_key
@@ -157,8 +163,11 @@ with left:
         format_func=_income_label,
         key="income_edit_idx",
     )
+    if st.session_state.get("income_form_reset_pending"):
+        _apply_income_form_defaults()
+        st.session_state["income_form_reset_pending"] = False
     if "income_form_date" not in st.session_state:
-        _reset_income_form()
+        _apply_income_form_defaults()
     if st.session_state.get("income_edit_last") != income_edit_idx:
         st.session_state["income_edit_last"] = income_edit_idx
         if income_edit_idx in income_df.index:
@@ -176,7 +185,7 @@ with left:
             st.session_state["income_form_amount"] = _coerce_amount(income_row.get("금액"))
             st.session_state["income_form_note"] = _coerce_text(income_row.get("비고"))
         else:
-            _reset_income_form()
+            _apply_income_form_defaults()
     with st.form("income_form", clear_on_submit=False):
         c1, c2 = st.columns(2, gap="small")
         in_date = c1.date_input("날짜", key="income_form_date")
@@ -202,7 +211,7 @@ with left:
             },
         )
         st.session_state["income_edit_last"] = -1
-        _reset_income_form()
+        _request_income_form_reset()
         st.toast("수입 항목을 저장했습니다.", icon="✅")
         st.session_state["income_edit_reset"] = True
         st.rerun()
@@ -212,7 +221,7 @@ with left:
         else:
             _delete_row("income", income_edit_idx)
             st.session_state["income_edit_last"] = -1
-            _reset_income_form()
+            _request_income_form_reset()
             st.toast("수입 항목을 삭제했습니다.", icon="🧹")
             st.session_state["income_edit_reset"] = True
             st.rerun()
@@ -243,8 +252,11 @@ with right:
         format_func=_expense_label,
         key="expense_edit_idx",
     )
+    if st.session_state.get("expense_form_reset_pending"):
+        _apply_expense_form_defaults()
+        st.session_state["expense_form_reset_pending"] = False
     if "expense_form_date" not in st.session_state:
-        _reset_expense_form()
+        _apply_expense_form_defaults()
     if st.session_state.get("expense_edit_last") != expense_edit_idx:
         st.session_state["expense_edit_last"] = expense_edit_idx
         if expense_edit_idx in expense_df.index:
@@ -262,7 +274,7 @@ with right:
             st.session_state["expense_form_amount"] = _coerce_amount(expense_row.get("금액"))
             st.session_state["expense_form_note"] = _coerce_text(expense_row.get("비고"))
         else:
-            _reset_expense_form()
+            _apply_expense_form_defaults()
     with st.form("expense_form", clear_on_submit=False):
         c1, c2 = st.columns(2, gap="small")
         ex_date = c1.date_input("날짜", key="expense_form_date")
@@ -286,7 +298,7 @@ with right:
             },
         )
         st.session_state["expense_edit_last"] = -1
-        _reset_expense_form()
+        _request_expense_form_reset()
         st.toast("지출 항목을 저장했습니다.", icon="✅")
         st.session_state["expense_edit_reset"] = True
         st.rerun()
