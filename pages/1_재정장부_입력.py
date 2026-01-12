@@ -311,7 +311,9 @@ with right:
         ex_detail = st.text_input("지출내역", key="expense_form_detail")
         ex_amount = st.number_input("금액(원)", min_value=0, step=1, key="expense_form_amount")
         ex_note = st.text_input("비고", key="expense_form_note")
-        expense_submit = st.form_submit_button("지출 저장")
+        b1, b2 = st.columns([1, 1], gap="small")
+        expense_submit = b1.form_submit_button("지출 저장")
+        expense_delete = b2.form_submit_button("지출 삭제")
     if expense_submit:
         prev_expense_row = None
         if expense_edit_idx in expense_df.index:
@@ -362,6 +364,34 @@ with right:
             st.caption(str(e))
         st.session_state["expense_edit_reset"] = True
         st.rerun()
+    if expense_delete:
+        if expense_edit_idx == -1:
+            st.warning("삭제할 지출 행을 먼저 선택해 주세요.")
+        else:
+            prev_expense_row = expense_df.loc[expense_edit_idx].to_dict()
+            _delete_row("expense", expense_edit_idx)
+            if prev_expense_row.get("지출항목") in ("예치금", "이월금"):
+                prev_income = {
+                    "날짜": prev_expense_row.get("날짜"),
+                    "적요": prev_expense_row.get("적요"),
+                    "수입항목": prev_expense_row.get("지출항목"),
+                    "수입내역": prev_expense_row.get("지출내역"),
+                    "금액": prev_expense_row.get("금액"),
+                    "비고": prev_expense_row.get("비고"),
+                }
+                match_idx = _find_income_match_index(prev_income)
+                if match_idx is not None:
+                    _delete_row("income", match_idx)
+            st.session_state["expense_edit_last"] = -1
+            _request_expense_form_reset()
+            try:
+                save_day(selected_date, st.session_state[income_key], st.session_state[expense_key])
+                st.toast("지출 항목을 삭제했습니다.", icon="🧹")
+            except Exception as e:
+                st.error("저장 중 오류가 발생했습니다.")
+                st.caption(str(e))
+            st.session_state["expense_edit_reset"] = True
+            st.rerun()
     st.dataframe(expense_df, width="stretch", hide_index=True)
 
 st.divider()
