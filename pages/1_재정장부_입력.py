@@ -73,38 +73,62 @@ expense_total = float(pd.to_numeric(expense_df["금액"], errors="coerce").filln
 
 left, right = st.columns(2, gap="large")
 
-def _add_row(which: str, row: dict) -> None:
+def _upsert_row(which: str, idx: int | None, row: dict) -> None:
     key = income_key if which == "income" else expense_key
     cols = INCOME_COLS if which == "income" else EXPENSE_COLS
     df = st.session_state.get(key, pd.DataFrame(columns=cols)).copy()
     df = _normalize_df(df, cols)
-    df.loc[len(df)] = row
-    st.session_state[key] = _normalize_df(df, cols)
-
-def _delete_row(which: str, idx: int) -> None:
-    key = income_key if which == "income" else expense_key
-    cols = INCOME_COLS if which == "income" else EXPENSE_COLS
-    df = st.session_state.get(key, pd.DataFrame(columns=cols)).copy()
-    if df.empty or idx not in df.index:
-        return
-    df = df.drop(index=idx).reset_index(drop=True)
+    if idx is not None and idx in df.index:
+        df.loc[idx] = row
+    else:
+        df.loc[len(df)] = row
     st.session_state[key] = _normalize_df(df, cols)
 
 with left:
     st.markdown('<div class="section-title">일별 헌금 수입 명세서</div>', unsafe_allow_html=True)
     st.metric("합계 금액", f"₩{income_total:,.0f}")
+    income_edit_idx = st.selectbox(
+        "수정할 수입 행",
+        options=[-1] + list(income_df.index),
+        format_func=lambda i: "신규 입력" if i == -1 else f"{i + 1}행",
+        key="income_edit_idx",
+    )
+    if income_edit_idx in income_df.index:
+        income_row = income_df.loc[income_edit_idx]
+        in_date_default = income_row.get("날짜")
+        if pd.isna(in_date_default):
+            in_date_default = selected_date
+        in_usage_default = income_row.get("적요")
+        if in_usage_default not in USAGE_OPTIONS:
+            in_usage_default = USAGE_OPTIONS[0]
+        in_item_default = income_row.get("수입항목")
+        if in_item_default not in INCOME_ITEMS:
+            in_item_default = INCOME_ITEMS[0]
+        in_detail_default = income_row.get("수입내역") or ""
+        in_amount_default = income_row.get("금액")
+        if pd.isna(in_amount_default):
+            in_amount_default = 0
+        in_note_default = income_row.get("비고") or ""
+    else:
+        in_date_default = selected_date
+        in_usage_default = USAGE_OPTIONS[0]
+        in_item_default = INCOME_ITEMS[0]
+        in_detail_default = ""
+        in_amount_default = 0
+        in_note_default = ""
     with st.form("income_form", clear_on_submit=True):
         c1, c2 = st.columns(2, gap="small")
-        in_date = c1.date_input("날짜", value=selected_date)
-        in_usage = c2.selectbox("적요", USAGE_OPTIONS)
-        in_item = st.selectbox("수입항목", INCOME_ITEMS)
-        in_detail = st.text_input("수입내역")
-        in_amount = st.number_input("금액(원)", min_value=0, step=1, value=0)
-        in_note = st.text_input("비고")
-        income_submit = st.form_submit_button("수입 추가")
+        in_date = c1.date_input("날짜", value=in_date_default, key=f"in_date_{income_edit_idx}")
+        in_usage = c2.selectbox("적요", USAGE_OPTIONS, index=USAGE_OPTIONS.index(in_usage_default), key=f"in_usage_{income_edit_idx}")
+        in_item = st.selectbox("수입항목", INCOME_ITEMS, index=INCOME_ITEMS.index(in_item_default), key=f"in_item_{income_edit_idx}")
+        in_detail = st.text_input("수입내역", value=in_detail_default, key=f"in_detail_{income_edit_idx}")
+        in_amount = st.number_input("금액(원)", min_value=0, step=1, value=in_amount_default, key=f"in_amount_{income_edit_idx}")
+        in_note = st.text_input("비고", value=in_note_default, key=f"in_note_{income_edit_idx}")
+        income_submit = st.form_submit_button("수입 저장")
     if income_submit:
-        _add_row(
+        _upsert_row(
             "income",
+            None if income_edit_idx == -1 else income_edit_idx,
             {
                 "날짜": in_date,
                 "적요": in_usage,
@@ -114,36 +138,56 @@ with left:
                 "비고": in_note,
             },
         )
-        st.toast("수입 항목을 추가했습니다.", icon="✅")
+        st.session_state["income_edit_idx"] = -1
+        st.toast("수입 항목을 저장했습니다.", icon="✅")
         st.rerun()
     st.dataframe(income_df, width="stretch", hide_index=True)
-    if not income_df.empty:
-        del_idx = st.selectbox(
-            "삭제할 수입 행",
-            options=list(income_df.index),
-            format_func=lambda i: f"{i + 1}행",
-            key="income_delete_idx",
-        )
-        if st.button("선택 수입 행 삭제", key="income_delete_btn", width="stretch"):
-            _delete_row("income", del_idx)
-            st.toast("수입 행을 삭제했습니다.", icon="🧹")
-            st.rerun()
 
 with right:
     st.markdown('<div class="section-title">일별 헌금 지출 명세서</div>', unsafe_allow_html=True)
     st.metric("합계 금액", f"₩{expense_total:,.0f}")
+    expense_edit_idx = st.selectbox(
+        "수정할 지출 행",
+        options=[-1] + list(expense_df.index),
+        format_func=lambda i: "신규 입력" if i == -1 else f"{i + 1}행",
+        key="expense_edit_idx",
+    )
+    if expense_edit_idx in expense_df.index:
+        expense_row = expense_df.loc[expense_edit_idx]
+        ex_date_default = expense_row.get("날짜")
+        if pd.isna(ex_date_default):
+            ex_date_default = selected_date
+        ex_usage_default = expense_row.get("적요")
+        if ex_usage_default not in USAGE_OPTIONS:
+            ex_usage_default = USAGE_OPTIONS[0]
+        ex_item_default = expense_row.get("지출항목")
+        if ex_item_default not in EXPENSE_ITEMS:
+            ex_item_default = EXPENSE_ITEMS[0]
+        ex_detail_default = expense_row.get("지출내역") or ""
+        ex_amount_default = expense_row.get("금액")
+        if pd.isna(ex_amount_default):
+            ex_amount_default = 0
+        ex_note_default = expense_row.get("비고") or ""
+    else:
+        ex_date_default = selected_date
+        ex_usage_default = USAGE_OPTIONS[0]
+        ex_item_default = EXPENSE_ITEMS[0]
+        ex_detail_default = ""
+        ex_amount_default = 0
+        ex_note_default = ""
     with st.form("expense_form", clear_on_submit=True):
         c1, c2 = st.columns(2, gap="small")
-        ex_date = c1.date_input("날짜", value=selected_date, key="ex_date")
-        ex_usage = c2.selectbox("적요", USAGE_OPTIONS, key="ex_usage")
-        ex_item = st.selectbox("지출항목", EXPENSE_ITEMS, key="ex_item")
-        ex_detail = st.text_input("지출내역", key="ex_detail")
-        ex_amount = st.number_input("금액(원)", min_value=0, step=1, value=0, key="ex_amount")
-        ex_note = st.text_input("비고", key="ex_note")
-        expense_submit = st.form_submit_button("지출 추가")
+        ex_date = c1.date_input("날짜", value=ex_date_default, key=f"ex_date_{expense_edit_idx}")
+        ex_usage = c2.selectbox("적요", USAGE_OPTIONS, index=USAGE_OPTIONS.index(ex_usage_default), key=f"ex_usage_{expense_edit_idx}")
+        ex_item = st.selectbox("지출항목", EXPENSE_ITEMS, index=EXPENSE_ITEMS.index(ex_item_default), key=f"ex_item_{expense_edit_idx}")
+        ex_detail = st.text_input("지출내역", value=ex_detail_default, key=f"ex_detail_{expense_edit_idx}")
+        ex_amount = st.number_input("금액(원)", min_value=0, step=1, value=ex_amount_default, key=f"ex_amount_{expense_edit_idx}")
+        ex_note = st.text_input("비고", value=ex_note_default, key=f"ex_note_{expense_edit_idx}")
+        expense_submit = st.form_submit_button("지출 저장")
     if expense_submit:
-        _add_row(
+        _upsert_row(
             "expense",
+            None if expense_edit_idx == -1 else expense_edit_idx,
             {
                 "날짜": ex_date,
                 "적요": ex_usage,
@@ -153,20 +197,10 @@ with right:
                 "비고": ex_note,
             },
         )
-        st.toast("지출 항목을 추가했습니다.", icon="✅")
+        st.session_state["expense_edit_idx"] = -1
+        st.toast("지출 항목을 저장했습니다.", icon="✅")
         st.rerun()
     st.dataframe(expense_df, width="stretch", hide_index=True)
-    if not expense_df.empty:
-        del_idx = st.selectbox(
-            "삭제할 지출 행",
-            options=list(expense_df.index),
-            format_func=lambda i: f"{i + 1}행",
-            key="expense_delete_idx",
-        )
-        if st.button("선택 지출 행 삭제", key="expense_delete_btn", width="stretch"):
-            _delete_row("expense", del_idx)
-            st.toast("지출 행을 삭제했습니다.", icon="🧹")
-            st.rerun()
 
 st.divider()
 
