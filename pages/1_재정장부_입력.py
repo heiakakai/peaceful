@@ -15,9 +15,9 @@ INCOME_ITEMS = [
     "작정헌금", "기타", "대출금", "예치금", "이월금"
 ]
 EXPENSE_ITEMS = [
-    "재정부", "예배부", "선교부", "사량부", "관리부", "식당봉사부", "새신자전도부",
-    "주일학교", "중고청년", "사례비1", "사례비2", "전기요금", "전화요금등", "상하수도요금",
-    "사택관리", "대출금이자", "화재보험료", "대출금", "예치금", "이월금"
+    "재정부", "예배부", "선교부", "차량부", "관리부", "식당봉사부", "새신자전도부",
+    "주일학교", "중고청년", "사례비1", "사례비2", "전기요금", "가스요금", "전화요금등", "상하수도요금",
+    "사택관리", "대출금이자", "화재보험료", "대출원금 상환", "예치금", "이월금"
 ]
 
 DEFAULT_ROWS = 200  # 엑셀 복붙 편의
@@ -31,6 +31,8 @@ if not require_login():
     st.stop()
 
 selected_date = church_date_picker(prefix="in")
+income_key = "in_income_work"
+expense_key = "in_expense_work"
 
 def _ensure_rows(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     """항상 DEFAULT_ROWS 이상이 되도록 행을 확보하고, 날짜/금액 타입을 정리합니다."""
@@ -59,15 +61,18 @@ def _ensure_rows(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
 state_date_key = "in_selected_date"
 if st.session_state.get(state_date_key) != selected_date.isoformat():
     inc, exp = fetch_day(selected_date)
-    st.session_state["in_income_work"] = _ensure_rows(inc, INCOME_COLS)
-    st.session_state["in_expense_work"] = _ensure_rows(exp, EXPENSE_COLS)
+    st.session_state[income_key] = _ensure_rows(inc, INCOME_COLS)
+    st.session_state[expense_key] = _ensure_rows(exp, EXPENSE_COLS)
     st.session_state[state_date_key] = selected_date.isoformat()
 
 # 현재 작업 DF
-income_df = st.session_state.get("in_income_work", pd.DataFrame(columns=INCOME_COLS))
-expense_df = st.session_state.get("in_expense_work", pd.DataFrame(columns=EXPENSE_COLS))
-income_df = _ensure_rows(income_df, INCOME_COLS)
-expense_df = _ensure_rows(expense_df, EXPENSE_COLS)
+if income_key not in st.session_state:
+    st.session_state[income_key] = _ensure_rows(pd.DataFrame(columns=INCOME_COLS), INCOME_COLS)
+if expense_key not in st.session_state:
+    st.session_state[expense_key] = _ensure_rows(pd.DataFrame(columns=EXPENSE_COLS), EXPENSE_COLS)
+
+income_df = st.session_state[income_key]
+expense_df = st.session_state[expense_key]
 
 income_total = float(pd.to_numeric(income_df["금액"], errors="coerce").fillna(0).sum())
 expense_total = float(pd.to_numeric(expense_df["금액"], errors="coerce").fillna(0).sum())
@@ -75,7 +80,7 @@ expense_total = float(pd.to_numeric(expense_df["금액"], errors="coerce").filln
 left, right = st.columns(2, gap="large")
 
 def _append_row(which: str):
-    key = "in_income_work" if which == "income" else "in_expense_work"
+    key = income_key if which == "income" else expense_key
     cols = INCOME_COLS if which == "income" else EXPENSE_COLS
     df = st.session_state.get(key, pd.DataFrame(columns=cols)).copy()
     df = _ensure_rows(df, cols)
@@ -104,7 +109,7 @@ with left:
             "금액": st.column_config.NumberColumn("금액(원)", min_value=0, step=1, format="accounting"),
             "비고": st.column_config.TextColumn("비고"),
         },
-        key=f"income_editor_{selected_date.isoformat()}",
+        key=income_key,
     )
 
 with right:
@@ -125,15 +130,8 @@ with right:
             "금액": st.column_config.NumberColumn("금액(원)", min_value=0, step=1, format="accounting"),
             "비고": st.column_config.TextColumn("비고"),
         },
-        key=f"expense_editor_{selected_date.isoformat()}",
+        key=expense_key,
     )
-
-# 편집 결과 반영(저장은 수동)
-edited_income = _ensure_rows(edited_income.copy(), INCOME_COLS)
-edited_expense = _ensure_rows(edited_expense.copy(), EXPENSE_COLS)
-
-st.session_state["in_income_work"] = edited_income
-st.session_state["in_expense_work"] = edited_expense
 
 st.divider()
 
@@ -142,7 +140,7 @@ c1, c2 = st.columns([1, 1], gap="small")
 
 def _save_now():
     try:
-        save_day(selected_date, st.session_state["in_income_work"], st.session_state["in_expense_work"])
+        save_day(selected_date, st.session_state[income_key], st.session_state[expense_key])
         st.toast("저장 완료", icon="💾")
     except Exception as e:
         st.error("저장 중 오류가 발생했습니다.")
@@ -151,7 +149,7 @@ def _save_now():
 c1.button("지금 저장", key="save_now_btn", on_click=_save_now, width="stretch")
 
 try:
-    day_xlsx = export_day_xlsx(selected_date, st.session_state["in_income_work"], st.session_state["in_expense_work"])
+    day_xlsx = export_day_xlsx(selected_date, st.session_state[income_key], st.session_state[expense_key])
     c2.download_button(
         "선택한 날짜 장부 다운로드 (.xlsx)",
         data=day_xlsx,
