@@ -135,6 +135,9 @@ def _upsert_row(which: str, idx: int | None, row: dict) -> None:
 with left:
     st.markdown('<div class="section-title">일별 헌금 수입 명세서</div>', unsafe_allow_html=True)
     st.metric("합계 금액", f"₩{income_total:,.0f}")
+    if st.session_state.get("income_edit_reset"):
+        st.session_state.pop("income_edit_idx", None)
+        st.session_state["income_edit_reset"] = False
     def _income_label(i: int) -> str:
         if i == -1:
             return "신규 입력"
@@ -198,26 +201,29 @@ with left:
                 "비고": in_note,
             },
         )
-        st.session_state["income_edit_idx"] = -1
         st.session_state["income_edit_last"] = -1
         _reset_income_form()
         st.toast("수입 항목을 저장했습니다.", icon="✅")
+        st.session_state["income_edit_reset"] = True
         st.rerun()
     if income_delete:
         if income_edit_idx == -1:
             st.warning("삭제할 수입 행을 먼저 선택해 주세요.")
         else:
             _delete_row("income", income_edit_idx)
-            st.session_state["income_edit_idx"] = -1
             st.session_state["income_edit_last"] = -1
             _reset_income_form()
             st.toast("수입 항목을 삭제했습니다.", icon="🧹")
+            st.session_state["income_edit_reset"] = True
             st.rerun()
     st.dataframe(income_df, width="stretch", hide_index=True)
 
 with right:
     st.markdown('<div class="section-title">일별 헌금 지출 명세서</div>', unsafe_allow_html=True)
     st.metric("합계 금액", f"₩{expense_total:,.0f}")
+    if st.session_state.get("expense_edit_reset"):
+        st.session_state.pop("expense_edit_idx", None)
+        st.session_state["expense_edit_reset"] = False
     def _expense_label(i: int) -> str:
         if i == -1:
             return "신규 입력"
@@ -279,10 +285,10 @@ with right:
                 "비고": ex_note,
             },
         )
-        st.session_state["expense_edit_idx"] = -1
         st.session_state["expense_edit_last"] = -1
         _reset_expense_form()
         st.toast("지출 항목을 저장했습니다.", icon="✅")
+        st.session_state["expense_edit_reset"] = True
         st.rerun()
     st.dataframe(expense_df, width="stretch", hide_index=True)
 
