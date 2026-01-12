@@ -33,8 +33,8 @@ if not require_login():
 selected_date = church_date_picker(prefix="in")
 income_key = "in_income_work"
 expense_key = "in_expense_work"
-income_editor_key = "in_income_editor"
-expense_editor_key = "in_expense_editor"
+income_editor_key = f"in_income_editor_{selected_date.isoformat()}"
+expense_editor_key = f"in_expense_editor_{selected_date.isoformat()}"
 
 def _ensure_rows(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     """항상 DEFAULT_ROWS 이상이 되도록 행을 확보하고, 날짜/금액 타입을 정리합니다."""
@@ -65,8 +65,6 @@ if st.session_state.get(state_date_key) != selected_date.isoformat():
     inc, exp = fetch_day(selected_date)
     st.session_state[income_key] = _ensure_rows(inc, INCOME_COLS)
     st.session_state[expense_key] = _ensure_rows(exp, EXPENSE_COLS)
-    st.session_state[income_editor_key] = st.session_state[income_key].copy()
-    st.session_state[expense_editor_key] = st.session_state[expense_key].copy()
     st.session_state[state_date_key] = selected_date.isoformat()
 
 # 현재 작업 DF
@@ -74,13 +72,9 @@ if income_key not in st.session_state:
     st.session_state[income_key] = _ensure_rows(pd.DataFrame(columns=INCOME_COLS), INCOME_COLS)
 if expense_key not in st.session_state:
     st.session_state[expense_key] = _ensure_rows(pd.DataFrame(columns=EXPENSE_COLS), EXPENSE_COLS)
-if income_editor_key not in st.session_state:
-    st.session_state[income_editor_key] = st.session_state[income_key].copy()
-if expense_editor_key not in st.session_state:
-    st.session_state[expense_editor_key] = st.session_state[expense_key].copy()
 
-income_df = st.session_state[income_editor_key]
-expense_df = st.session_state[expense_editor_key]
+income_df = st.session_state[income_key]
+expense_df = st.session_state[expense_key]
 
 income_total = float(pd.to_numeric(income_df["금액"], errors="coerce").fillna(0).sum())
 expense_total = float(pd.to_numeric(expense_df["금액"], errors="coerce").fillna(0).sum())
@@ -89,7 +83,6 @@ left, right = st.columns(2, gap="large")
 
 def _append_row(which: str):
     key = income_key if which == "income" else expense_key
-    editor_key = income_editor_key if which == "income" else expense_editor_key
     cols = INCOME_COLS if which == "income" else EXPENSE_COLS
     df = st.session_state.get(key, pd.DataFrame(columns=cols)).copy()
     df = _ensure_rows(df, cols)
@@ -98,7 +91,6 @@ def _append_row(which: str):
     row["날짜"] = selected_date
     df.loc[len(df)] = row
     st.session_state[key] = df
-    st.session_state[editor_key] = df.copy()
     st.rerun()
 
 with left:
@@ -107,7 +99,7 @@ with left:
     st.button("➕ 수입 행 추가(날짜 자동)", key="add_income_row", on_click=_append_row, args=("income",), width="stretch")
 
     edited_income = st.data_editor(
-        st.session_state[income_key],
+        income_df,
         num_rows="fixed",
         width="stretch",
         hide_index=True,
@@ -129,7 +121,7 @@ with right:
     st.button("➕ 지출 행 추가(날짜 자동)", key="add_expense_row", on_click=_append_row, args=("expense",), width="stretch")
 
     edited_expense = st.data_editor(
-        st.session_state[expense_key],
+        expense_df,
         num_rows="fixed",
         width="stretch",
         hide_index=True,
