@@ -51,6 +51,45 @@ def _normalize_df(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
 
     return df
 
+def _coerce_date(value, fallback):
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return fallback
+    if isinstance(value, pd.Timestamp):
+        return value.date()
+    try:
+        return pd.to_datetime(value).date()
+    except Exception:
+        return fallback
+
+def _coerce_text(value) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    return str(value)
+
+def _coerce_amount(value) -> float:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return 0.0
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
+
+def _reset_income_form() -> None:
+    st.session_state["income_form_date"] = selected_date
+    st.session_state["income_form_usage"] = USAGE_OPTIONS[0]
+    st.session_state["income_form_item"] = INCOME_ITEMS[0]
+    st.session_state["income_form_detail"] = ""
+    st.session_state["income_form_amount"] = 0.0
+    st.session_state["income_form_note"] = ""
+
+def _reset_expense_form() -> None:
+    st.session_state["expense_form_date"] = selected_date
+    st.session_state["expense_form_usage"] = USAGE_OPTIONS[0]
+    st.session_state["expense_form_item"] = EXPENSE_ITEMS[0]
+    st.session_state["expense_form_detail"] = ""
+    st.session_state["expense_form_amount"] = 0.0
+    st.session_state["expense_form_note"] = ""
+
 # 날짜 변경 시 DB에서 로드
 state_date_key = "in_selected_date"
 if st.session_state.get(state_date_key) != selected_date.isoformat():
@@ -106,39 +145,34 @@ with left:
         format_func=_income_label,
         key="income_edit_idx",
     )
-    if income_edit_idx in income_df.index:
-        income_row = income_df.loc[income_edit_idx]
-        in_date_default = income_row.get("날짜")
-        if pd.isna(in_date_default):
-            in_date_default = selected_date
-        in_usage_default = income_row.get("적요")
-        if in_usage_default not in USAGE_OPTIONS:
-            in_usage_default = USAGE_OPTIONS[0]
-        in_item_default = income_row.get("수입항목")
-        if in_item_default not in INCOME_ITEMS:
-            in_item_default = INCOME_ITEMS[0]
-        in_detail_default = income_row.get("수입내역") or ""
-        in_amount_default = income_row.get("금액")
-        if pd.isna(in_amount_default):
-            in_amount_default = 0.0
+    if "income_form_date" not in st.session_state:
+        _reset_income_form()
+    if st.session_state.get("income_edit_last") != income_edit_idx:
+        st.session_state["income_edit_last"] = income_edit_idx
+        if income_edit_idx in income_df.index:
+            income_row = income_df.loc[income_edit_idx]
+            st.session_state["income_form_date"] = _coerce_date(income_row.get("날짜"), selected_date)
+            usage = income_row.get("적요")
+            if usage not in USAGE_OPTIONS:
+                usage = USAGE_OPTIONS[0]
+            st.session_state["income_form_usage"] = usage
+            item = income_row.get("수입항목")
+            if item not in INCOME_ITEMS:
+                item = INCOME_ITEMS[0]
+            st.session_state["income_form_item"] = item
+            st.session_state["income_form_detail"] = _coerce_text(income_row.get("수입내역"))
+            st.session_state["income_form_amount"] = _coerce_amount(income_row.get("금액"))
+            st.session_state["income_form_note"] = _coerce_text(income_row.get("비고"))
         else:
-            in_amount_default = float(in_amount_default)
-        in_note_default = income_row.get("비고") or ""
-    else:
-        in_date_default = selected_date
-        in_usage_default = USAGE_OPTIONS[0]
-        in_item_default = INCOME_ITEMS[0]
-        in_detail_default = ""
-        in_amount_default = 0
-        in_note_default = ""
-    with st.form("income_form", clear_on_submit=True):
+            _reset_income_form()
+    with st.form("income_form", clear_on_submit=False):
         c1, c2 = st.columns(2, gap="small")
-        in_date = c1.date_input("날짜", value=in_date_default, key=f"in_date_{income_edit_idx}")
-        in_usage = c2.selectbox("적요", USAGE_OPTIONS, index=USAGE_OPTIONS.index(in_usage_default), key=f"in_usage_{income_edit_idx}")
-        in_item = st.selectbox("수입항목", INCOME_ITEMS, index=INCOME_ITEMS.index(in_item_default), key=f"in_item_{income_edit_idx}")
-        in_detail = st.text_input("수입내역", value=in_detail_default, key=f"in_detail_{income_edit_idx}")
-        in_amount = st.number_input("금액(원)", min_value=0.0, step=1.0, value=float(in_amount_default), key=f"in_amount_{income_edit_idx}")
-        in_note = st.text_input("비고", value=in_note_default, key=f"in_note_{income_edit_idx}")
+        in_date = c1.date_input("날짜", key="income_form_date")
+        in_usage = c2.selectbox("적요", USAGE_OPTIONS, key="income_form_usage")
+        in_item = st.selectbox("수입항목", INCOME_ITEMS, key="income_form_item")
+        in_detail = st.text_input("수입내역", key="income_form_detail")
+        in_amount = st.number_input("금액(원)", min_value=0.0, step=1.0, key="income_form_amount")
+        in_note = st.text_input("비고", key="income_form_note")
         income_submit = st.form_submit_button("수입 저장")
     if income_submit:
         _upsert_row(
@@ -154,6 +188,8 @@ with left:
             },
         )
         st.session_state["income_edit_idx"] = -1
+        st.session_state["income_edit_last"] = -1
+        _reset_income_form()
         st.toast("수입 항목을 저장했습니다.", icon="✅")
         st.rerun()
     st.dataframe(income_df, width="stretch", hide_index=True)
@@ -180,39 +216,34 @@ with right:
         format_func=_expense_label,
         key="expense_edit_idx",
     )
-    if expense_edit_idx in expense_df.index:
-        expense_row = expense_df.loc[expense_edit_idx]
-        ex_date_default = expense_row.get("날짜")
-        if pd.isna(ex_date_default):
-            ex_date_default = selected_date
-        ex_usage_default = expense_row.get("적요")
-        if ex_usage_default not in USAGE_OPTIONS:
-            ex_usage_default = USAGE_OPTIONS[0]
-        ex_item_default = expense_row.get("지출항목")
-        if ex_item_default not in EXPENSE_ITEMS:
-            ex_item_default = EXPENSE_ITEMS[0]
-        ex_detail_default = expense_row.get("지출내역") or ""
-        ex_amount_default = expense_row.get("금액")
-        if pd.isna(ex_amount_default):
-            ex_amount_default = 0.0
+    if "expense_form_date" not in st.session_state:
+        _reset_expense_form()
+    if st.session_state.get("expense_edit_last") != expense_edit_idx:
+        st.session_state["expense_edit_last"] = expense_edit_idx
+        if expense_edit_idx in expense_df.index:
+            expense_row = expense_df.loc[expense_edit_idx]
+            st.session_state["expense_form_date"] = _coerce_date(expense_row.get("날짜"), selected_date)
+            usage = expense_row.get("적요")
+            if usage not in USAGE_OPTIONS:
+                usage = USAGE_OPTIONS[0]
+            st.session_state["expense_form_usage"] = usage
+            item = expense_row.get("지출항목")
+            if item not in EXPENSE_ITEMS:
+                item = EXPENSE_ITEMS[0]
+            st.session_state["expense_form_item"] = item
+            st.session_state["expense_form_detail"] = _coerce_text(expense_row.get("지출내역"))
+            st.session_state["expense_form_amount"] = _coerce_amount(expense_row.get("금액"))
+            st.session_state["expense_form_note"] = _coerce_text(expense_row.get("비고"))
         else:
-            ex_amount_default = float(ex_amount_default)
-        ex_note_default = expense_row.get("비고") or ""
-    else:
-        ex_date_default = selected_date
-        ex_usage_default = USAGE_OPTIONS[0]
-        ex_item_default = EXPENSE_ITEMS[0]
-        ex_detail_default = ""
-        ex_amount_default = 0
-        ex_note_default = ""
-    with st.form("expense_form", clear_on_submit=True):
+            _reset_expense_form()
+    with st.form("expense_form", clear_on_submit=False):
         c1, c2 = st.columns(2, gap="small")
-        ex_date = c1.date_input("날짜", value=ex_date_default, key=f"ex_date_{expense_edit_idx}")
-        ex_usage = c2.selectbox("적요", USAGE_OPTIONS, index=USAGE_OPTIONS.index(ex_usage_default), key=f"ex_usage_{expense_edit_idx}")
-        ex_item = st.selectbox("지출항목", EXPENSE_ITEMS, index=EXPENSE_ITEMS.index(ex_item_default), key=f"ex_item_{expense_edit_idx}")
-        ex_detail = st.text_input("지출내역", value=ex_detail_default, key=f"ex_detail_{expense_edit_idx}")
-        ex_amount = st.number_input("금액(원)", min_value=0.0, step=1.0, value=float(ex_amount_default), key=f"ex_amount_{expense_edit_idx}")
-        ex_note = st.text_input("비고", value=ex_note_default, key=f"ex_note_{expense_edit_idx}")
+        ex_date = c1.date_input("날짜", key="expense_form_date")
+        ex_usage = c2.selectbox("적요", USAGE_OPTIONS, key="expense_form_usage")
+        ex_item = st.selectbox("지출항목", EXPENSE_ITEMS, key="expense_form_item")
+        ex_detail = st.text_input("지출내역", key="expense_form_detail")
+        ex_amount = st.number_input("금액(원)", min_value=0.0, step=1.0, key="expense_form_amount")
+        ex_note = st.text_input("비고", key="expense_form_note")
         expense_submit = st.form_submit_button("지출 저장")
     if expense_submit:
         _upsert_row(
@@ -228,6 +259,8 @@ with right:
             },
         )
         st.session_state["expense_edit_idx"] = -1
+        st.session_state["expense_edit_last"] = -1
+        _reset_expense_form()
         st.toast("지출 항목을 저장했습니다.", icon="✅")
         st.rerun()
     st.dataframe(expense_df, width="stretch", hide_index=True)
