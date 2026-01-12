@@ -212,7 +212,12 @@ with left:
         )
         st.session_state["income_edit_last"] = -1
         _request_income_form_reset()
-        st.toast("수입 항목을 저장했습니다.", icon="✅")
+        try:
+            save_day(selected_date, st.session_state[income_key], st.session_state[expense_key])
+            st.toast("수입 항목을 저장했습니다.", icon="✅")
+        except Exception as e:
+            st.error("저장 중 오류가 발생했습니다.")
+            st.caption(str(e))
         st.session_state["income_edit_reset"] = True
         st.rerun()
     if income_delete:
@@ -222,7 +227,12 @@ with left:
             _delete_row("income", income_edit_idx)
             st.session_state["income_edit_last"] = -1
             _request_income_form_reset()
-            st.toast("수입 항목을 삭제했습니다.", icon="🧹")
+            try:
+                save_day(selected_date, st.session_state[income_key], st.session_state[expense_key])
+                st.toast("수입 항목을 삭제했습니다.", icon="🧹")
+            except Exception as e:
+                st.error("저장 중 오류가 발생했습니다.")
+                st.caption(str(e))
             st.session_state["income_edit_reset"] = True
             st.rerun()
     st.dataframe(income_df, width="stretch", hide_index=True)
@@ -299,25 +309,20 @@ with right:
         )
         st.session_state["expense_edit_last"] = -1
         _request_expense_form_reset()
-        st.toast("지출 항목을 저장했습니다.", icon="✅")
+        try:
+            save_day(selected_date, st.session_state[income_key], st.session_state[expense_key])
+            st.toast("지출 항목을 저장했습니다.", icon="✅")
+        except Exception as e:
+            st.error("저장 중 오류가 발생했습니다.")
+            st.caption(str(e))
         st.session_state["expense_edit_reset"] = True
         st.rerun()
     st.dataframe(expense_df, width="stretch", hide_index=True)
 
 st.divider()
 
-# 저장/다운로드
+# 다운로드
 c1, c2 = st.columns([1, 1], gap="small")
-
-def _save_now():
-    try:
-        save_day(selected_date, st.session_state[income_key], st.session_state[expense_key])
-        st.toast("저장 완료", icon="💾")
-    except Exception as e:
-        st.error("저장 중 오류가 발생했습니다.")
-        st.caption(str(e))
-
-c1.button("지금 저장", key="save_now_btn", on_click=_save_now, width="stretch")
 
 try:
     day_xlsx = export_day_xlsx(selected_date, st.session_state[income_key], st.session_state[expense_key])
