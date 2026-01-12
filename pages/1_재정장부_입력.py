@@ -90,6 +90,15 @@ def _reset_expense_form() -> None:
     st.session_state["expense_form_amount"] = 0
     st.session_state["expense_form_note"] = ""
 
+def _delete_row(which: str, idx: int) -> None:
+    key = income_key if which == "income" else expense_key
+    cols = INCOME_COLS if which == "income" else EXPENSE_COLS
+    df = st.session_state.get(key, pd.DataFrame(columns=cols)).copy()
+    if df.empty or idx not in df.index:
+        return
+    df = df.drop(index=idx).reset_index(drop=True)
+    st.session_state[key] = _normalize_df(df, cols)
+
 # 날짜 변경 시 DB에서 로드
 state_date_key = "in_selected_date"
 if st.session_state.get(state_date_key) != selected_date.isoformat():
@@ -173,7 +182,9 @@ with left:
         in_detail = st.text_input("수입내역", key="income_form_detail")
         in_amount = st.number_input("금액(원)", min_value=0, step=1, key="income_form_amount")
         in_note = st.text_input("비고", key="income_form_note")
-        income_submit = st.form_submit_button("수입 저장")
+        b1, b2 = st.columns([1, 1], gap="small")
+        income_submit = b1.form_submit_button("수입 저장")
+        income_delete = b2.form_submit_button("수입 삭제")
     if income_submit:
         _upsert_row(
             "income",
@@ -192,6 +203,16 @@ with left:
         _reset_income_form()
         st.toast("수입 항목을 저장했습니다.", icon="✅")
         st.rerun()
+    if income_delete:
+        if income_edit_idx == -1:
+            st.warning("삭제할 수입 행을 먼저 선택해 주세요.")
+        else:
+            _delete_row("income", income_edit_idx)
+            st.session_state["income_edit_idx"] = -1
+            st.session_state["income_edit_last"] = -1
+            _reset_income_form()
+            st.toast("수입 항목을 삭제했습니다.", icon="🧹")
+            st.rerun()
     st.dataframe(income_df, width="stretch", hide_index=True)
 
 with right:
